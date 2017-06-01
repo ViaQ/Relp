@@ -1,10 +1,10 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'RELP/version'
+require 'relp/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "RELP"
+  spec.name          = "relp"
   spec.version       = Relp::VERSION
   spec.authors       = ["Dominik Hlavac Duran"]
   spec.email         = ["dhlavacd@redhat.com"]
