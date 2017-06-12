@@ -7,21 +7,20 @@ module Relp
     @@relp_software = 'librelp,1.2.13,http://librelp.adiscon.com'
 
     def frame_write(socket, frame)
-      new_frame = Hash.new
-      new_frame[:txnr] = frame[:txnr].to_s
-      new_frame[:message] = frame[:message]
-      new_frame[:frame_length] = frame[:message].length.to_s
+#      new_frame = Hash.new
+#      new_frame[:txnr] = frame[:txnr]
+#      new_frame[:message] = frame[:message]
+#      new_frame[:frame_length] = frame[:message].length.to_s
 
       raw_data=[
-          new_frame[:txnr],
-          new_frame[:command],
-          new_frame[:data_length],
-          new_frame[:message]
+          frame[:txnr],
+          frame[:command],
+          frame[:message]
       ].join(' ')
-      @logger.debug"Writing Frame #{new_frame.inspect}"
+      @logger.debug"Writing Frame #{frame.inspect}"
       begin
         socket.write(raw_data)
-        socket.write("\n")
+        @logger.debug"\"#{raw_data}\""
       rescue Errno::EPIPE,IOError,Errno::ECONNRESET
         raise Relp::ConnectionClosed
       end
@@ -29,6 +28,8 @@ module Relp
 
     def frame_read(socket)
       begin
+        @logger.debug"Read begin"
+	socket_content = nil
         socket_content = socket.read_nonblock(4096)
         puts (socket_content)
         frame = Hash.new
@@ -40,8 +41,10 @@ module Relp
         end
         @logger.debug"Reading Frame #{frame.inspect}"
       rescue IOError
+        @logger.debug"read problem"
         raise Relp::FrameReadException.new('Problem with reading RELP frame')
       rescue Errno::ECONNRESET
+        @logger.debug"connection reset"
         raise Relp::ConnectionClosed.new('Connection closed')
       end
       is_valid_command(frame[:command])
