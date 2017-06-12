@@ -28,13 +28,18 @@ module Relp
             @logger.info "New client connection coming from ip #{remote_ip}"
             @logger.debug "New client started with object id=#{client_socket.object_id}"
             connection_setup(client_socket)
-            frame = communication_processing(client_socket)
-            return_message(frame[:message]) #there is message- callback to return method
-            ack_frame(client_socket,frame[:txnr])
+	    loop do
+                frame = communication_processing(client_socket)
+		if frame != nil
+                  return_message(frame[:message]) #there is message- callback to return method
+                  ack_frame(client_socket,frame[:txnr])
+		end
+	    end
           rescue Relp::ConnectionClosed
             @logger.debug("Connection to #{remote_ip} Closed")
           ensure
             client.close rescue nil
+	    @logger.debug "Client closed"
           end
         end
 
@@ -55,7 +60,7 @@ module Relp
     def ack_frame(socket, txnr)
       frame = {:txnr => txnr,
                :command => 'rsp',
-               :message => '200 OK'
+               :message => "6 200 OK\n"
       }
       frame_write(socket, frame)
     end
@@ -93,6 +98,7 @@ module Relp
       @logger.debug 'Connection setup'
       begin
         frame = frame_read(socket)
+        @logger.debug 'Frame read complete, processing..'
         if frame[:command] == 'open'
           @logger.debug 'Client command open'
           message_informations = extract_mesage_information(frame[:message])
@@ -107,7 +113,8 @@ module Relp
             frame_write(socket, response_frame)
             raise Relp::InvalidCommand, 'Missing required command'
           else
-            Hash.new response_frame = create_frame(frame[:txnr], 'rsp', '200 OK ' + 'relp_version=' +@@relp_version + "\n" + 'relp_software=' + @@relp_software + "\n" + 'commands=' + @required_command)
+            Hash.new response_frame = create_frame(
+	    frame[:txnr], 'rsp', '93 200 OK' + "\n" + 'relp_version=' +@@relp_version + "\n" + 'relp_software=' + @@relp_software + "\n" + 'commands=' + @required_command + "\n")
             @logger.info "Sending response to client"
             #binding.pry
             frame_write(socket, response_frame)
@@ -118,6 +125,7 @@ module Relp
           raise Relp::InvalidCommand, frame[:command] + ' expecting open command'
         end
       rescue Relp::RelpProtocolError
+        @logger.debug 'timed out (no frame)'
         server_close_message(socket)
       end
     end
@@ -135,5 +143,5 @@ module Relp
   end
 end
 
-server = Relp::RelpServer.new('0.0.0.0', 2000, 'syslog')
+server = Relp::RelpServer.new('0.0.0.0', 5140, 'syslog')
 server.run
