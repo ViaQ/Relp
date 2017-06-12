@@ -1,4 +1,4 @@
- require 'lib/relp/server'
+require 'relp/server'
 # require 'relp/relp_protocol.rb'
 # require '../lib/relp/exceptions.rb'
 require 'logger'
@@ -7,8 +7,8 @@ require 'logger'
 
 module Relp
 
-  port = 5000
-  @relp_server = RelpServer.new( port)
+	server = Relp::RelpServer.new('0.0.0.0', 2000, 'syslog')
+	server.run
 
 end
 
