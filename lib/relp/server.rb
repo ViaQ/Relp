@@ -80,6 +80,9 @@ module Relp
     def communication_processing(socket)
       @logger.debug 'Communication processing'
       frame = frame_read(socket)
+	if frame == nil
+	  return nil
+	end
       if frame[:command] == 'syslog'
         return frame
       elsif frame[:command] == 'close'
