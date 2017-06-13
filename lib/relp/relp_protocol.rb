@@ -46,6 +46,9 @@ module Relp
       rescue Errno::ECONNRESET
         @logger.debug"connection reset"
         raise Relp::ConnectionClosed.new('Connection closed')
+      rescue Exception => e
+	puts(e)
+	return nil
       end
       is_valid_command(frame[:command])
 
