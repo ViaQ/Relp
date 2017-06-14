@@ -8,6 +8,7 @@ module Relp
     def initialize(host, port, required_commands=[], logger = nil, callback)
       @logger = logger
       @logger = Logger.new(STDOUT) if logger.nil?
+      #@logger.level = Logger::INFO #TODO find how to set log level
       @callback = callback
       @required_command = required_commands
 
@@ -81,6 +82,14 @@ module Relp
       end
     end
 
+    def server_shut_down
+      if @server
+        @logger.info 'Server shutdown'
+        @server.shutdown
+        @server = nil
+      end
+    end
+
     def communication_processing(socket)
       @logger.debug 'Communication processing'
       frame = frame_read(socket)
@@ -89,54 +98,49 @@ module Relp
       elsif frame[:command] == 'close'
         response_frame = create_frame(frame[:txnr], "rsp", "0")
         frame_write(socket,response_frame)
+        @logger.info 'Client send close message'
         server_close_message(socket)
         raise Relp::ConnectionClosed
-        @logger.info 'Client send close message'
       else
         server_close_message(socket)
         raise Relp::RelpProtocolError, 'Wrong relp command'
       end
     end
-  #
 
     def connection_setup(socket)
       @logger.debug 'Connection setup'
       begin
-        frame = frame_read(socket)
-        @logger.debug 'Frame read complete, processing..'
-        if frame[:command] == 'open'
-          @logger.debug 'Client command open'
-          message_informations = extract_message_information(frame[:message])
-          if message_informations[:relp_version].empty?
-            @logger.warn 'Missing RELP version specification'
-            server_close_message(socket)
-            raise Relp::RelpProtocolError
-          elsif @required_command != message_informations[:commands]
-            @logger.warn 'Missing required commands - syslog'
-            server_close_message(socket)
-            Hash.new response_frame = create_frame(frame[:txnr], 'rsp', '20 500 Missing required command ' + @required_command)
-            frame_write(socket, response_frame)
-            raise Relp::InvalidCommand, 'Missing required command'
+        read_ready = IO.select([socket], nil, nil, 10)
+        if read_ready
+          frame = frame_read(socket)
+          puts(frame)
+          @logger.debug 'Frame read complete, processing..'
+          if frame[:command] == 'open'
+            @logger.debug 'Client command open'
+            message_informations = extract_message_information(frame[:message])
+            if message_informations[:relp_version].empty?
+              @logger.warn 'Missing RELP version specification'
+              server_close_message(socket)
+              raise Relp::RelpProtocolError
+            elsif @required_command != message_informations[:commands]
+              @logger.warn 'Missing required commands - syslog'
+              server_close_message(socket)
+              Hash.new response_frame = create_frame(frame[:txnr], 'rsp', '20 500 Missing required command ' + @required_command)
+              frame_write(socket, response_frame)
+              raise Relp::InvalidCommand, 'Missing required command'
+            else
+              Hash.new response_frame = create_frame(frame[:txnr], 'rsp', '93 200 OK' + "\n" + 'relp_version=' +@@relp_version + "\n" + 'relp_software=' + @@relp_software + "\n" + 'commands=' + @required_command + "\n")
+              @logger.debug 'Sending response to client'
+              frame_write(socket, response_frame)
+            end
           else
-            Hash.new response_frame = create_frame(
-	    frame[:txnr], 'rsp', '93 200 OK' + "\n" + 'relp_version=' +@@relp_version + "\n" + 'relp_software=' + @@relp_software + "\n" + 'commands=' + @required_command + "\n")
-            @logger.debug 'Sending response to client'
-            frame_write(socket, response_frame)
+            server_close_message(socket)
+            raise Relp::InvalidCommand, frame[:command] + ' expecting open command'
           end
-        else
-          server_close_message(socket)
-          raise Relp::InvalidCommand, frame[:command] + ' expecting open command'
         end
       rescue Relp::RelpProtocolError
         @logger.debug 'Timed out (no frame to read)'
         server_close_message(socket)
-      end
-    end
-
-    def server_shut_down
-      if @server
-        @server.shutdown
-        @server = nil
       end
     end
   end
