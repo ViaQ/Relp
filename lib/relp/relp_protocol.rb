@@ -1,4 +1,4 @@
-require_relative 'exceptions'
+require 'exceptions'
 require 'socket'
 module Relp
 

@@ -1,7 +1,7 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require_relative 'relp/version'
+require 'relp/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "relp"
@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["dhlavacd@redhat.com"]
 
   spec.summary       = "Ruby implementation of RELP (Reliable Event Logging Protocol) protocol."
-  spec.description   = "Ruby implementation of RELP (Reliable Event Logging Protocol) protocol."
+  spec.description   = "If you want to receive or send message via RELP protocol you can use this gem"
   spec.homepage      = "https://github.com/dhlavac/Relp"
   spec.license       = "MIT"
 
