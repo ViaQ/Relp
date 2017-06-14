@@ -1,4 +1,4 @@
-require_relative 'relp_protocol'
+require 'relp_protocol'
 require 'logger'
 require 'thread'
 
