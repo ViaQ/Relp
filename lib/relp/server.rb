@@ -5,12 +5,13 @@ require 'thread'
 module Relp
   class RelpServer < RelpProtocol
 
-    def initialize(host, port, required_commands=[], logger = nil, callback)
+    def initialize(host, port, logger = nil, callback)
       @logger = logger
       @logger = Logger.new(STDOUT) if logger.nil?
+      @socket_list = Array.new
       #@logger.level = Logger::INFO #TODO find how to set log level
       @callback = callback
-      @required_command = required_commands
+      @required_command = 'syslog'
 
       begin
         @server = TCPServer.new(host, port)
@@ -25,6 +26,7 @@ module Relp
       loop do
         Thread.start(@server.accept) do |client_socket|
           begin
+            @socket_list.push client_socket
             remote_ip = client_socket.peeraddr[3]
             @logger.info "New client connection coming from ip #{remote_ip}"
             @logger.debug "New client started with object id=#{client_socket.object_id}"
@@ -84,17 +86,21 @@ module Relp
         frame_write(socket,frame)
         @logger.debug 'Server close message send'
         socket.close
+        socket_list.delete socket
       rescue Relp::ConnectionClosed
       end
     end
 
     def server_shut_down
-      if @server
-        @logger.info 'Server shutdown'
-        @server.shutdown
-        @server = nil
+      @socket_list.each do |client|
+        server_close_message(client)
       end
+      @logger.info 'Server shutdown'
+      @server.shutdown
+      @server = nil
     end
+
+    private
 
     def communication_processing(socket)
       @logger.debug 'Communication processing'
