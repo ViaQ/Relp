@@ -1,4 +1,4 @@
-require 'relp_protocol'
+require 'relp/relp_protocol'
 require 'logger'
 require 'thread'
 
@@ -29,18 +29,20 @@ module Relp
             @logger.info "New client connection coming from ip #{remote_ip}"
             @logger.debug "New client started with object id=#{client_socket.object_id}"
             connection_setup(client_socket)
-            puts(Thread.current.object_id)
             while Thread.current.alive? do
               ready = IO.select([client_socket], nil, nil, 10)
               if ready
                 frame = communication_processing(client_socket)
-                return_message(frame[:message])#, method(:on_message))
+                return_message(frame[:message], method(:on_message))
                 ack_frame(client_socket,frame[:txnr])
               end
             end
           rescue Relp::ConnectionClosed
+            @logger.error "Connection closed"
+          rescue Relp::RelpProtocolError => err
+            @logger.warn 'Relp error: ' + err.class.to_s + ' ' + err.message
           ensure
-            client.close rescue nil
+            server_close_message(client_socket) rescue nil
             @logger.debug "Closing client socket=#{client_socket.object_id}"
             @logger.info "Client from ip #{remote_ip} closed"
           end
@@ -50,9 +52,12 @@ module Relp
     end
 
     def return_message(message, callback)
-      remove = message.split(": ").first + ": "
-      message.slice! remove
-      @callback.call(message)
+      list_of_messages = message.split(/\n+/)
+      list_of_messages.each do |msg|
+        remove = msg.split(": ").first + ": "
+        msg.slice! remove
+        @callback.call(msg)
+      end
     end
 
     def create_frame( txnr, command, message)
@@ -77,6 +82,7 @@ module Relp
       }
       begin
         frame_write(socket,frame)
+        @logger.debug 'Server close message send'
         socket.close
       rescue Relp::ConnectionClosed
       end
@@ -113,7 +119,6 @@ module Relp
         read_ready = IO.select([socket], nil, nil, 10)
         if read_ready
           frame = frame_read(socket)
-          puts(frame)
           @logger.debug 'Frame read complete, processing..'
           if frame[:command] == 'open'
             @logger.debug 'Client command open'
@@ -124,9 +129,9 @@ module Relp
               raise Relp::RelpProtocolError
             elsif @required_command != message_informations[:commands]
               @logger.warn 'Missing required commands - syslog'
-              server_close_message(socket)
               Hash.new response_frame = create_frame(frame[:txnr], 'rsp', '20 500 Missing required command ' + @required_command)
               frame_write(socket, response_frame)
+              server_close_message(socket)
               raise Relp::InvalidCommand, 'Missing required command'
             else
               Hash.new response_frame = create_frame(frame[:txnr], 'rsp', '93 200 OK' + "\n" + 'relp_version=' +@@relp_version + "\n" + 'relp_software=' + @@relp_software + "\n" + 'commands=' + @required_command + "\n")
