@@ -1,4 +1,4 @@
-require_relative 'exceptions'
+require 'relp/exceptions'
 require 'socket'
 module Relp
 
@@ -7,20 +7,14 @@ module Relp
     @@relp_software = 'librelp,1.2.13,http://librelp.adiscon.com'
 
     def frame_write(socket, frame)
-#      new_frame = Hash.new
-#      new_frame[:txnr] = frame[:txnr]
-#      new_frame[:message] = frame[:message]
-#      new_frame[:frame_length] = frame[:message].length.to_s
-
       raw_data=[
           frame[:txnr],
           frame[:command],
           frame[:message]
       ].join(' ')
-      @logger.debug"Writing Frame #{frame.inspect}"
+      @logger.debug "Writing Frame #{frame.inspect}"
       begin
         socket.write(raw_data)
-        @logger.debug"\"#{raw_data}\""
       rescue Errno::EPIPE,IOError,Errno::ECONNRESET
         raise Relp::ConnectionClosed
       end
@@ -28,10 +22,7 @@ module Relp
 
     def frame_read(socket)
       begin
-        @logger.debug"Read begin"
-	socket_content = nil
         socket_content = socket.read_nonblock(4096)
-        puts (socket_content)
         frame = Hash.new
         if match = socket_content.match(/(^[0-9]+) ([\S]*) (\d+)([\s\S]*)/)
           frame[:txnr], frame[:command], frame[:data_length], frame[:message] = match.captures
@@ -39,16 +30,13 @@ module Relp
         else
           raise raise Relp::FrameReadException.new('Problem with reading RELP frame')
         end
-        @logger.debug"Reading Frame #{frame.inspect}"
+        @logger.debug "Reading Frame #{frame.inspect}"
       rescue IOError
-        @logger.debug"read problem"
-        raise Relp::FrameReadException.new('Problem with reading RELP frame')
+        @logger.error 'Problem with reading RELP frame'
+        raise Relp::FrameReadException.new 'Problem with reading RELP frame'
       rescue Errno::ECONNRESET
-        @logger.debug"connection reset"
-        raise Relp::ConnectionClosed.new('Connection closed')
-      rescue Exception => e
-	puts(e)
-	return nil
+        @logger.error 'Connection reset'
+        raise Relp::ConnectionClosed.new 'Connection closed'
       end
       is_valid_command(frame[:command])
 
@@ -58,11 +46,12 @@ module Relp
     def is_valid_command(command)
       valid_commands = ["open", "close", "rsp", "syslog"]
       if !valid_commands.include?(command)
+        @logger.error 'Invalid RELP command'
         raise Relp::InvalidCommand.new('Invalid command')
       end
     end
 
-    def extract_mesage_information(message)
+    def extract_message_information(message)
       informations = Hash[message.scan(/^(.*)=(.*)$/).map { |(key, value)| [key.to_sym, value] }]
     end
   end
