@@ -5,12 +5,13 @@ require 'thread'
 module Relp
   class RelpServer < RelpProtocol
 
-    def initialize(host, port, required_commands=[], logger = nil, callback)
+    def initialize(host, port, logger = nil, callback)
       @logger = logger
       @logger = Logger.new(STDOUT) if logger.nil?
+      @socket_list = Array.new
       #@logger.level = Logger::INFO #TODO find how to set log level
       @callback = callback
-      @required_command = required_commands
+      @required_command = 'syslog'
 
       begin
         @server = TCPServer.new(host, port)
@@ -25,6 +26,7 @@ module Relp
       loop do
         Thread.start(@server.accept) do |client_socket|
           begin
+            @socket_list.push client_socket
             remote_ip = client_socket.peeraddr[3]
             @logger.info "New client connection coming from ip #{remote_ip}"
             @logger.debug "New client started with object id=#{client_socket.object_id}"
@@ -33,12 +35,12 @@ module Relp
               ready = IO.select([client_socket], nil, nil, 10)
               if ready
                 frame = communication_processing(client_socket)
-                return_message(frame[:message], method(:on_message))
+                return_message(frame[:message], (@callback))
                 ack_frame(client_socket,frame[:txnr])
               end
             end
           rescue Relp::ConnectionClosed
-            @logger.error "Connection closed"
+            @logger.info "Connection closed"
           rescue Relp::RelpProtocolError => err
             @logger.warn 'Relp error: ' + err.class.to_s + ' ' + err.message
           ensure
@@ -47,8 +49,10 @@ module Relp
             @logger.info "Client from ip #{remote_ip} closed"
           end
         end
-
       end
+    rescue Errno::EINVAL
+      # Swallowing exception here because it results even from properly closed socket
+      @logger.info "Socket close."
     end
 
     def return_message(message, callback)
@@ -56,7 +60,7 @@ module Relp
       list_of_messages.each do |msg|
         remove = msg.split(": ").first + ": "
         msg.slice! remove
-        @callback.call(msg)
+        callback.call(msg)
       end
     end
 
@@ -84,21 +88,30 @@ module Relp
         frame_write(socket,frame)
         @logger.debug 'Server close message send'
         socket.close
+        @socket_list.delete socket
       rescue Relp::ConnectionClosed
       end
     end
 
     def server_shut_down
-      if @server
-        @logger.info 'Server shutdown'
-        @server.shutdown
-        @server = nil
+      @socket_list.each do |client_socket|
+        if client_socket != nil
+	  server_close_message(client_socket)
+	end
       end
+      @logger.info 'Server shutdown'
+      @server.shutdown
+      @server = nil
     end
+
+    private
 
     def communication_processing(socket)
       @logger.debug 'Communication processing'
       frame = frame_read(socket)
+	if frame == nil
+	  return nil
+	end
       if frame[:command] == 'syslog'
         return frame
       elsif frame[:command] == 'close'
