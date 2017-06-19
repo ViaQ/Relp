@@ -1,6 +1,7 @@
 # RELP
 
-TODO: Description
+This library contains native implementation of [RELP protocol](http://www.rsyslog.com/doc/relp.html) in ruby. At the moment only server-side
+is properly implemented and (to some extent) tested.
 
 ## Installation
 
@@ -20,7 +21,10 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions
+To use this library, require it in your ruby application file, then you can create `Relp::RelpServer`. Arguments are `(bind, port, [log,] callback)`,
+where `bind` is :string and specifies address you want to bind to, use "0.0.0.0" to bind to any address. `port` is :integer and sets on which port you want to listen for incoming RELP connections.
+`log` is optional and allows you to pass you application's logger into relp library to receive its logs, otherwise the server creates its own standard logger. Finally `callback` is method you want to be
+executed upon successfully accepted message, it has only one :string parameter, which is message itself.
 
 ## Development
 
