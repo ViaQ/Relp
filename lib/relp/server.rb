@@ -40,7 +40,7 @@ module Relp
               end
             end
           rescue Relp::ConnectionClosed
-            @logger.error "Connection closed"
+            @logger.info "Connection closed"
           rescue Relp::RelpProtocolError => err
             @logger.warn 'Relp error: ' + err.class.to_s + ' ' + err.message
           ensure
@@ -49,8 +49,10 @@ module Relp
             @logger.info "Client from ip #{remote_ip} closed"
           end
         end
-
       end
+    rescue Errno::EINVAL
+      # Swallowing exception here because it results even from properly closed socket
+      @logger.info "Socket close."
     end
 
     def return_message(message, callback)
@@ -92,8 +94,10 @@ module Relp
     end
 
     def server_shut_down
-      @socket_list.each do |client|
-        server_close_message(client)
+      @socket_list.each do |client_socket|
+        if client_socket != nil
+	  server_close_message(client_socket)
+	end
       end
       @logger.info 'Server shutdown'
       @server.shutdown
