@@ -35,7 +35,7 @@ module Relp
               ready = IO.select([client_socket], nil, nil, 10)
               if ready
                 frame = communication_processing(client_socket)
-                return_message(frame[:message], method(:on_message))
+                return_message(frame[:message], (@callback))
                 ack_frame(client_socket,frame[:txnr])
               end
             end
@@ -58,7 +58,7 @@ module Relp
       list_of_messages.each do |msg|
         remove = msg.split(": ").first + ": "
         msg.slice! remove
-        @callback.call(msg)
+        callback.call(msg)
       end
     end
 
@@ -86,7 +86,7 @@ module Relp
         frame_write(socket,frame)
         @logger.debug 'Server close message send'
         socket.close
-        socket_list.delete socket
+        @socket_list.delete socket
       rescue Relp::ConnectionClosed
       end
     end
