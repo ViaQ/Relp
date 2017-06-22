@@ -1,11 +1,9 @@
 require 'relp/exceptions'
 require 'socket'
 module Relp
-
   class RelpProtocol
     @@relp_version = '0'
     @@relp_software = 'librelp,1.2.13,http://librelp.adiscon.com'
-
     def frame_write(socket, frame)
       raw_data=[
           frame[:txnr],
@@ -19,7 +17,7 @@ module Relp
         raise Relp::ConnectionClosed
       end
     end
-
+    # Read socket and return Relp frame information in hash
     def frame_read(socket)
       begin
         socket_content = socket.read_nonblock(4096)
@@ -43,6 +41,8 @@ module Relp
       return frame
     end
 
+  private
+    # Check if command is one of valid commands if not raise exception
     def is_valid_command(command)
       valid_commands = ["open", "close", "rsp", "syslog"]
       if !valid_commands.include?(command)
@@ -50,7 +50,7 @@ module Relp
         raise Relp::InvalidCommand.new('Invalid command')
       end
     end
-
+    # Parse information from message and crate new hash (symbol => value) e.g. (:version => 0)
     def extract_message_information(message)
       informations = Hash[message.scan(/^(.*)=(.*)$/).map { |(key, value)| [key.to_sym, value] }]
     end

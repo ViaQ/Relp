@@ -4,12 +4,10 @@ require 'thread'
 
 module Relp
   class RelpServer < RelpProtocol
-
     def initialize(host, port, logger = nil, callback)
       @logger = logger
       @logger = Logger.new(STDOUT) if logger.nil?
       @socket_list = Array.new
-      #@logger.level = Logger::INFO #TODO find how to set log level
       @callback = callback
       @required_command = 'syslog'
 
@@ -17,7 +15,7 @@ module Relp
         @server = TCPServer.new(host, port)
         @logger.info "Starting #{self.class} on %s:%i" % @server.local_address.ip_unpack
       rescue Errno::EADDRINUSE
-        @logger.error  "ERROR Could not start relp server: Port #{port} in use" #add port number
+        @logger.error  "ERROR Could not start relp server: Port #{port} in use"
         raise Errno::EADDRINUSE
       end
     end
@@ -64,7 +62,7 @@ module Relp
       end
     end
 
-    def create_frame( txnr, command, message)
+    def create_frame(txnr, command, message)
       frame = {:txnr => txnr,
                :command => command,
                :message => message
@@ -93,11 +91,11 @@ module Relp
       end
     end
 
-    def server_shut_down
+    def server_shutdown
       @socket_list.each do |client_socket|
         if client_socket != nil
-	  server_close_message(client_socket)
-	end
+	        server_close_message(client_socket)
+	      end
       end
       @logger.info 'Server shutdown'
       @server.shutdown
@@ -105,13 +103,9 @@ module Relp
     end
 
     private
-
     def communication_processing(socket)
       @logger.debug 'Communication processing'
       frame = frame_read(socket)
-	if frame == nil
-	  return nil
-	end
       if frame[:command] == 'syslog'
         return frame
       elsif frame[:command] == 'close'

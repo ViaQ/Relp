@@ -21,17 +21,51 @@ Or install it yourself as:
 
 ## Usage
 
-To use this library, require it in your ruby application file, then you can create `Relp::RelpServer`. Arguments are `(bind, port, [log,] callback)`,
-where `bind` is :string and specifies address you want to bind to, use "0.0.0.0" to bind to any address. `port` is :integer and sets on which port you want to listen for incoming RELP connections.
-`log` is optional and allows you to pass you application's logger into relp library to receive its logs, otherwise the server creates its own standard logger. Finally `callback` is method you want to be
-executed upon successfully accepted message, it has only one :string parameter, which is message itself.
+### Server
+
+To run server just creat instance of `Relp::RelpServer.new(host, port, logger = nil, callback)`
+and than call method run on instance of server e.g. `server.run`
+
+`host` 
+  * This is a required setting.
+  * Value type is string
+  * There is no default value for this setting.
+  * Specifies address you want to bind to, use "0.0.0.0" to bind to any address
+
+
+
+`port` 
+
+  * This is a required setting.
+  * Value type is number
+  * There is no default value for this setting.
+  * Sets on which port you want to listen for incoming RELP connections
+
+
+`logger`
+  
+  * This is optional setting
+  * Value type is logger object
+  * If is not set - default is `Logger.new(STDOUT)` with all levels of logging
+ 
+`callback`
+  * This is a required setting.
+  * Method you want to be executed upon successfully accepted message, it has only one :string parameter, which is message itself.
+  
+  ####Important Methods
+  * `run` Start connceting clients
+  *  `server_shutdown` Close connection to all clients and shutdown server
+
+### Client
+
+Coming soon.
+
 
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
-
+To install this gem onto your local machine, run `bundle exec rake install`. 
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/dhlavac/RELP.
