@@ -52,7 +52,7 @@ and than call method run on instance of server e.g. `server.run`
   * This is a required setting.
   * Method you want to be executed upon successfully accepted message, it has only one :Hash parameter, which is message itself.
   
-####Important Methods
+#### Important Methods
   * `run` Start connceting clients
   *  `server_shutdown` Close connection to all clients and shutdown server
 
