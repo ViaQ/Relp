@@ -15,8 +15,8 @@ Gem::Specification.new do |spec|
   spec.license       = 'MIT'
 
 
-  spec.files         = `git ls-files`.split("\n")
-  spec.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
+  spec.files         = Dir['{lib,bin,test}/**/*'] + ['LICENSE.txt', 'README.md', 'Rakefile', 'CHANGELOG.md']
+  spec.test_files    = Dir['{test}/**/*']
   spec.require_paths = ["lib"]
 
 
