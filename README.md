@@ -50,9 +50,9 @@ and than call method run on instance of server e.g. `server.run`
  
 `callback`
   * This is a required setting.
-  * Method you want to be executed upon successfully accepted message, it has only one :string parameter, which is message itself.
+  * Method you want to be executed upon successfully accepted message, it has only one :Hash parameter, which is message itself.
   
-  ####Important Methods
+####Important Methods
   * `run` Start connceting clients
   *  `server_shutdown` Close connection to all clients and shutdown server
 
@@ -68,7 +68,7 @@ After checking out the repo, run `bin/setup` to install dependencies. Then, run 
 To install this gem onto your local machine, run `bundle exec rake install`. 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/dhlavac/RELP.
+Bug reports and pull requests are welcome on GitHub at https://github.com/ViaQ/Relp.
 
 
 ## License
