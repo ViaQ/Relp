@@ -22,7 +22,8 @@ module Relp
 
     def run
       loop do
-        Thread.start(@server.accept) do |client_socket|
+        client_socket = @server.accept
+        Thread.start(client_socket) do |client_socket|
           begin
             @socket_list.push client_socket
             remote_ip = client_socket.peeraddr[3]
@@ -41,6 +42,8 @@ module Relp
             @logger.info "Connection closed"
           rescue Relp::RelpProtocolError => err
             @logger.warn 'Relp error: ' + err.class.to_s + ' ' + err.message
+          rescue Exception => e
+            @logger.debug e
           ensure
             server_close_message(client_socket) rescue nil
             @logger.debug "Closing client socket=#{client_socket.object_id}"
