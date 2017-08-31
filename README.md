@@ -1,6 +1,6 @@
 # RELP
 
-This library contains native implementation of [RELP protocol](http://www.rsyslog.com/doc/relp.html) in ruby. At the moment only server-side
+This library contains native implementation of [RELP protocol](http://www.rsyslog.com/doc/relp.html) in ruby with TLS support. At the moment only server-side
 is properly implemented and (to some extent) tested.
 
 ## Installation
@@ -23,16 +23,8 @@ Or install it yourself as:
 
 ### Server
 
-To run server just creat instance of `Relp::RelpServer.new(host, port, logger = nil, callback)`
-and than call method run on instance of server e.g. `server.run`
-
-`host` 
-  * This is a required setting.
-  * Value type is string
-  * There is no default value for this setting.
-  * Specifies address you want to bind to, use "0.0.0.0" to bind to any address
-
-
+To run server just create instance of `Relp::RelpServer.new(port, callback, host, tls_context, logger)`
+and then call method run on instance of server e.g. `server.run`
 
 `port` 
 
@@ -41,19 +33,37 @@ and than call method run on instance of server e.g. `server.run`
   * There is no default value for this setting.
   * Sets on which port you want to listen for incoming RELP connections
 
-
+`callback`
+  * This is a required setting.
+  * Method you want to be executed upon successfully accepted message, it has only one :string parameter, which is message itself.
+  
+`host` 
+  * This is a required setting.
+  * Value type is string
+  * Default value is "0.0.0.0' to bind any address
+  * Specifies address you want to bind to, use "0.0.0.0" to bind to any address
+ 
+`tls_context` 
+  * Value type is SSL_context_object = OpenSSL::SSL::SSLContext.new See -> OpenSSL <a href="http://ruby-doc.org/stdlib-2.0.0/libdoc/openssl/rdoc/OpenSSL/SSL/SSLContext.html">homepage</a>
+  * If is not set - server runs without TLS or SSL encryption
+  * Example of TLS/SSL context object:
+  ```ruby
+      sslContext = OpenSSL::SSL::SSLContext.new
+      sslContext.cert = OpenSSL::X509::Certificate.new(File.open("path/to/certificate/cert.pem"))
+      sslContext.key = OpenSSL::PKey::RSA.new(File.open("path/to/key/key.pem"))
+      sslContext.ca_file = 'path/to/certificate/authority/ca.pem'
+      sslContext.verify_mode = OpenSSL::SSL::VERIFY_PEER #only if you want verify peer
+  ```
+ 
 `logger`
   
   * This is optional setting
   * Value type is logger object
   * If is not set - default is `Logger.new(STDOUT)` with all levels of logging
  
-`callback`
-  * This is a required setting.
-  * Method you want to be executed upon successfully accepted message, it has only one :Hash parameter, which is message itself.
-  
-#### Important Methods
-  * `run` Start connceting clients
+
+  ####Important Methods
+  * `run` Start connecting clients
   *  `server_shutdown` Close connection to all clients and shutdown server
 
 ### Client

@@ -1,10 +1,11 @@
 require 'relp/relp_protocol'
 require 'logger'
 require 'thread'
+require "openssl"
 
 module Relp
   class RelpServer < RelpProtocol
-    def initialize(host, port, logger = nil, callback)
+    def initialize(port, callback, host = '0.0.0.0' , tls_context = nil, logger = nil)
       @logger = logger
       @logger = Logger.new(STDOUT) if logger.nil?
       @socket_list = Array.new
@@ -12,8 +13,13 @@ module Relp
       @required_command = 'syslog'
 
       begin
-        @server = TCPServer.new(host, port)
-        @logger.info "Starting #{self.class} on %s:%i" % @server.local_address.ip_unpack
+        @server = TCPServer.new host, port
+        if tls_context
+          @logger.info "Starting #{self.class} with SSL enabled on %s:%i" % @server.local_address.ip_unpack
+          @server = OpenSSL::SSL::SSLServer.new(@server, tls_context)
+        else
+          @logger.info "Starting #{self.class} on %s:%i" % @server.local_address.ip_unpack
+        end
       rescue Errno::EADDRINUSE
         @logger.error  "ERROR Could not start relp server: Port #{port} in use"
         raise Errno::EADDRINUSE
@@ -42,6 +48,8 @@ module Relp
             @logger.info "Connection closed"
           rescue Relp::RelpProtocolError => err
             @logger.warn 'Relp error: ' + err.class.to_s + ' ' + err.message
+          rescue OpenSSL::SSL::SSLError => ssl_error
+            @logger.error "SSL Error", :exception => ssl_error
           rescue Exception => e
             @logger.debug e
           ensure
@@ -65,13 +73,6 @@ module Relp
       end
     end
 
-    def create_frame(txnr, command, message)
-      frame = {:txnr => txnr,
-               :command => command,
-               :message => message
-      }
-    end
-
     def ack_frame(socket, txnr)
       frame = {:txnr => txnr,
                :command => 'rsp',
@@ -82,7 +83,7 @@ module Relp
 
     def server_close_message(socket)
       Hash.new frame = {:txnr => 0,
-               :command => 'serverclose',
+               :command => 'close',
                :message => '0'
       }
       begin
