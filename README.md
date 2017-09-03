@@ -23,8 +23,8 @@ Or install it yourself as:
 
 ### Server
 
-To run server just creat instance of `Relp::RelpServer.new(host, port, logger = nil, callback)`
-and than call method run on instance of server e.g. `server.run`
+To run server just create instance of `Relp::RelpServer.new(host, port, logger = nil, callback)`
+and then call method run on instance of server e.g. `server.run`
 
 `host` 
   * This is a required setting.
@@ -53,7 +53,7 @@ and than call method run on instance of server e.g. `server.run`
   * Method you want to be executed upon successfully accepted message, it has only one :Hash parameter, which is message itself.
   
 #### Important Methods
-  * `run` Start connceting clients
+  * `run` Start connecting clients
   *  `server_shutdown` Close connection to all clients and shutdown server
 
 ### Client
