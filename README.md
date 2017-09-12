@@ -62,7 +62,7 @@ and then call method run on instance of server e.g. `server.run`
   * If is not set - default is `Logger.new(STDOUT)` with all levels of logging
  
 
-  ####Important Methods
+#### Important Methods
   * `run` Start connecting clients
   *  `server_shutdown` Close connection to all clients and shutdown server
 
