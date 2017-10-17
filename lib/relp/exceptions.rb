@@ -13,4 +13,7 @@ module Relp
 
   class InvalidCommand < RelpProtocolError
   end
+
+  class MissingData < RelpProtocolError
+  end
 end
