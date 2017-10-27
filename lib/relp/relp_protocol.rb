@@ -5,6 +5,8 @@ require "openssl"
 module Relp
   class RelpProtocol
     @@relp_version = '0'
+    # TODO: check whether this exact line is needed or if we can put in something
+    # custom to help debugging
     @@relp_software = 'librelp,1.2.13,http://librelp.adiscon.com'
 
     def create_frame(txnr, command, message)
@@ -66,6 +68,10 @@ module Relp
       informations = Hash[message.scan(/^(.*)=(.*)$/).map { |(key, value)| [key.to_sym, value] }]
     end
 
+    # IN PROGRESS!
+    # TODO: find how exactly relp behaves under high load (batch processing
+    # and adjust this function accordingly, probably more elaborate logic and
+    # some dynamic offset corrections will be needed
     def check_message_length(frame)
       if frame[:command] == "close"
         real_length = frame[:message].length
