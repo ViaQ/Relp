@@ -5,14 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2017-09-11
-### Changed
-- Server side - new arguments sequence `(port, callback, host = '0.0.0.0' , tls_context = nil, logger = nil)`  
-- Improved RELP frame checking
 ## [Unreleased]
+
+## [0.2.1] - 2017-10-27
+### Removed
+- Temporarily reverted length checking of RELP frames as it caused connection to break under high loads.
+
+## [0.2.0] - 2017-09-11
 ### Added
 - Changelog
 - This repo transferred to ViaQ organization
+### Changed
+- Server side - new arguments sequence `(port, callback, host = '0.0.0.0' , tls_context = nil, logger = nil)`
+- Improved RELP frame checking
 
 ## [0.1.1] - 2017-06-23
 ### Changed
