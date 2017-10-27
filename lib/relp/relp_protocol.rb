@@ -34,7 +34,7 @@ module Relp
         frame = Hash.new
         if match = socket_content.match(/(^[0-9]+) ([\S]*) (\d+)([\s\S]*)/)
           frame[:txnr], frame[:command], frame[:data_length], frame[:message] = match.captures
-          check_message_length(frame)
+          # check_message_length(frame) - currently unstable, needs some more work
           frame[:message].lstrip! #message could be empty
         else
           raise Relp::FrameReadException.new('Problem with reading RELP frame')
