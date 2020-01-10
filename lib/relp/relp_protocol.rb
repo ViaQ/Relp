@@ -1,87 +1,69 @@
 require 'relp/exceptions'
-require 'socket'
-require "openssl"
+require 'relp/version'
 
 module Relp
   class RelpProtocol
-    @@relp_version = '0'
-    # TODO: check whether this exact line is needed or if we can put in something
-    # custom to help debugging
-    @@relp_software = 'librelp,1.2.13,http://librelp.adiscon.com'
+    @@relp_version = '0'.freeze
+    @@relp_software = "ruby-relp,#{VERSION},https://github.com/ViaQ/Relp".freeze
+    @@required_commands = 'syslog'.freeze
 
-    def create_frame(txnr, command, message)
-      frame = {:txnr => txnr,
-               :command => command,
-               :message => message
-      }
-    end
-
-    def frame_write(socket, frame)
-      raw_data=[
-          frame[:txnr],
-          frame[:command],
-          frame[:message]
-      ].join(' ')
-      @logger.debug "Writing Frame #{frame.inspect}"
-      begin
-        socket.write(raw_data)
-      rescue Errno::EPIPE,IOError,Errno::ECONNRESET
-        raise Relp::ConnectionClosed
-      end
-    end
-    # Read socket and return Relp frame information in hash
-    def frame_read(socket)
-      begin
-        socket_content = socket.read_nonblock(4096)
-        frame = Hash.new
-        if match = socket_content.match(/(^[0-9]+) ([\S]*) (\d+)([\s\S]*)/)
-          frame[:txnr], frame[:command], frame[:data_length], frame[:message] = match.captures
-          # check_message_length(frame) - currently unstable, needs some more work
-          frame[:message].lstrip! #message could be empty
-        else
-          raise Relp::FrameReadException.new('Problem with reading RELP frame')
-        end
-        @logger.debug "Reading Frame #{frame.inspect}"
-      rescue IOError
-        @logger.error 'Problem with reading RELP frame'
-        raise Relp::FrameReadException.new 'Problem with reading RELP frame'
-      rescue Errno::ECONNRESET
-        @logger.error 'Connection reset'
-        raise Relp::ConnectionClosed.new 'Connection closed'
-      end
-      is_valid_command(frame[:command])
-
-      return frame
-    end
-
-  private
-    # Check if command is one of valid commands if not raise exception
-    def is_valid_command(command)
-      valid_commands = ["open", "close", "rsp", "syslog"]
-      if !valid_commands.include?(command)
-        @logger.error 'Invalid RELP command'
-        raise Relp::InvalidCommand.new('Invalid command')
-      end
-    end
-    # Parse information from message and crate new hash (symbol => value) e.g. (:version => 0)
-    def extract_message_information(message)
-      informations = Hash[message.scan(/^(.*)=(.*)$/).map { |(key, value)| [key.to_sym, value] }]
-    end
-
-    # IN PROGRESS!
-    # TODO: find how exactly relp behaves under high load (batch processing
-    # and adjust this function accordingly, probably more elaborate logic and
-    # some dynamic offset corrections will be needed
-    def check_message_length(frame)
-      if frame[:command] == "close"
-        real_length = frame[:message].length
+    def frame_parse(content)
+      frame = Hash.new
+      if match = content.match(/\A([0-9]+) ([\S]*) (\d+)(?: ?)([\s\S]*)\z/)
+        frame[:txnr], frame[:command], frame[:data_length], frame[:message] = match.captures
       else
-        real_length = frame[:message].length - 2
+        raise Relp::FrameParseException.new("Invalid RELP frame: #{content}")
       end
-      if real_length != frame[:data_length].to_i
-        @logger.error 'Lost data'
-        raise Relp::MissingData.new('Data length is not same as received data')
+      if frame[:message].length != frame[:data_length].to_i
+        raise Relp::FrameParseException.new("Got #{frame[:message].length} bytes of data, expected #{frame[:data_length]}")
+      end
+      frame
+    end
+
+    def ack_frame(frame)
+      # librelp violates the spec and requires a space after 200
+      return frame[:txnr] + ' rsp 6 200 OK'
+    end
+
+    def ack_offer_frame(frame)
+      data = {
+        'relp_version' => @@relp_version,
+        'relp_software'=> @@relp_software,
+        'commands' => @@required_commands
+      }
+      # librelp violates the spec and requires a space after 200
+      message = "200 OK"
+      data.each do |key, value|
+        message += "\n#{key}=#{value}"
+      end
+      frame_encode(frame[:txnr], 'rsp', message)
+    end
+
+    def nack_frame(frame, error_message)
+      frame_encode(frame[:txnr], 'rsp', '500 ' + error_message)
+    end
+
+    def validate_offer(message)
+      # Parse information from an offer message and crate new hash (symbol => value) e.g. (:version => 0)
+      offer_data = Hash[message.scan(/^(.*)=(.*)$/).map { |(key, value)| [key.to_sym, value] }]
+      if offer_data[:relp_version].empty?
+        raise Relp::InvalidOffer.new('Missing RELP version')
+      elsif offer_data[:relp_version] != '0'
+        raise Relp::InvalidOffer.new('Incompatible RELP version')
+      elsif offer_data[:commands] != @@required_commands
+        raise Relp::InvalidOffer.new("Missing required commands #{@@required_commands}")
       end
     end
+
+    private
+    def frame_encode(txnr, command, message)
+      data = [
+        txnr,
+        command,
+        message.length
+      ].join(' ')
+      data += ' ' + message if message.length >= 0
+    end
+
   end
 end
