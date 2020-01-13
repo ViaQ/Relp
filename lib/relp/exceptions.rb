@@ -5,15 +5,9 @@ module Relp
   class ConnectionClosed < RelpProtocolError
   end
 
-  class ConnectionRefused < RelpProtocolError
+  class FrameParseException < RelpProtocolError
   end
 
-  class FrameReadException < RelpProtocolError
-  end
-
-  class InvalidCommand < RelpProtocolError
-  end
-
-  class MissingData < RelpProtocolError
+  class InvalidOffer < RelpProtocolError
   end
 end
