@@ -37,7 +37,7 @@ module Relp
         data.chomp!
         @logger.debug "Relp #{@remote_ip} read: #{data.dump}"
         return data
-      rescue Errno::EPIPE,Errno::ECONNRESET,EOFError
+      rescue Errno::EPIPE,Errno::ECONNRESET,IOError
         @logger.debug "Relp #{@remote_ip} read: connection reset"
         raise Relp::ConnectionClosed
       rescue StandardException => err
@@ -50,7 +50,7 @@ module Relp
       begin
         @logger.debug "Relp #{@remote_ip} write: #{data.dump}"
         @socket.puts(data)
-      rescue Errno::EPIPE,Errno::ECONNRESET,EOFError
+      rescue Errno::EPIPE,Errno::ECONNRESET,IOError
         @logger.debug "Relp #{@remote_ip} write: connection reset"
         raise Relp::ConnectionClosed
       rescue StandardException => err
@@ -86,7 +86,11 @@ module Relp
           @callback.call(frame[:message], @remote_ip)
           write_socket(ack_frame(frame))
         when 'close'
-          write_socket(ack_frame(frame))
+          begin
+            write_socket(ack_frame(frame))
+          rescue Relp::ConnectionClosed
+            # by spec client is not required to wait for response
+          end
           return
         else
           @logger.warn "Relp #{@remote_ip} unknown command #{frame[:command].dump}"
@@ -99,7 +103,7 @@ module Relp
       # socket might already be closed
       begin
         write_socket('0 close 0')
-      rescue StandardException
+      rescue Relp::ConnectionClosed
       end
     end
 

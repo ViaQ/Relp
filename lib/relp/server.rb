@@ -5,14 +5,14 @@ require 'openssl'
 
 module Relp
   class RelpServer
-    def initialize(port, callback, host = '0.0.0.0' , tls_context = nil, logger = nil)
+    def initialize(port, callback, host: '0.0.0.0' , tls_context: nil, logger: nil)
       @logger = logger
       @logger = Logger.new(STDOUT) if logger.nil?
       @socket_list = Array.new
       @callback = callback
 
       begin
-        @server = TCPServer.new host, port
+        @server = TCPServer.new(host, port)
         if tls_context
           @logger.info "Starting #{self.class} with SSL enabled on %s:%i" % @server.local_address.ip_unpack
           @server = OpenSSL::SSL::SSLServer.new(@server, tls_context)
